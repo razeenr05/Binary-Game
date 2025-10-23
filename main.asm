@@ -41,19 +41,18 @@ main:
 menu_loop:
 	jal DrawMenu # call function to draw menu screen
 	li $v0, SysReadInt # prepare to read integer input
-	syscall # read user choice (1, 2, or 0)
+	syscall # read user choice (1 or 0)
 	move $s0, $v0 # store mode in $s0
 
 	beq $s0, $zero, exit_program # if user entered 0, quit
-	li $t0, 1
-	beq $s0, $t0, start_game # if user chose 1 then start Binary to Decimal
-	li $t0, 2
-	beq $s0, $t0, start_game # if user chose 2 then start Decimal to Binary
+	li $t0, 1 # load 1 into t0
+	beq $s0, $t0, start_game # if user chose 1 then start game
+
 
 	# invalid input case
 	li $v0, SysPrintString # print error message
-	la $a0, badOpt
-	syscall
+	la $a0, badOpt # error message string
+	syscall # execute
 	j menu_loop # reshow menu
 
 start_game:
@@ -79,12 +78,16 @@ question_loop:
 	syscall # perform random generation
 	move $s2, $a0 # save random number into $s2
 
-	# decide which game mode to use
-	li $t0, 1
-	beq $s0, $t0, binary_to_decimal # mode 1: binary to decimal
-	li $t0, 2
-	beq $s0, $t0, decimal_to_binary # mode 2: decimal to binary
-	j exit_program # safety fallback
+	# randomly decide question type 
+	# 0 is binary to decimal and 1 is decimal to binary
+	li $v0, SysRandIntRange # syscall for rand int generation
+	li $a0, 0 # lower bound
+	li $a1, 2 # upper bound
+	syscall # execute
+	move $t9, $a0 # store random mode into $t9
+
+	beq $t9, $zero, binary_to_decimal # if random = 0 go to binary to decimal
+	j decimal_to_binary # if random = 1 go to decimal to binary
 
 binary_to_decimal:
 	move $a0, $s2 # move random number to $a0
@@ -92,23 +95,23 @@ binary_to_decimal:
 	jal int_to_bin8 # convert int to 8-bit binary string
 
 	# print the binary prompt and value
-	li $v0, SysPrintString
-	la $a0, b2dPrompt
-	syscall
-	li $v0, SysPrintString
-	la $a0, binStr
-	syscall
-	li $v0, SysPrintString
-	la $a0, nl
-	syscall
+	li $v0, SysPrintString # syscall to print string
+	la $a0, b2dPrompt # prompt
+	syscall # execute
+	li $v0, SysPrintString # syscall to print string
+	la $a0, binStr # the binary sring
+	syscall # execute
+	li $v0, SysPrintString # syscall to print string
+	la $a0, nl # newline
+	syscall # execute
 
 ask_dec:
 	# prompt user to enter decimal
-	li $v0, SysPrintString
-	la $a0, askDec
-	syscall
-	li $v0, SysReadInt
-	syscall
+	li $v0, SysPrintString # syscall to print string
+	la $a0, askDec # decimal prompt
+	syscall # execute
+	li $v0, SysReadInt # syscall to print int
+	syscall # execute
 	move $t0, $v0 # store user’s input
 
 	# validate that input is between 0–255
@@ -121,9 +124,9 @@ ask_dec:
 
 bad_dec:
 	# print invalid input message
-	li $v0, SysPrintString
-	la $a0, retryMsg
-	syscall
+	li $v0, SysPrintString #syscall to print string
+	la $a0, retryMsg # error message 
+	syscall # execute and print
 	j ask_dec # ask again
 
 check_b2d:
@@ -132,39 +135,41 @@ check_b2d:
 
 wrong_dec:
 	# show correct decimal answer
-	li $v0, SysPrintString
-	la $a0, noMsg
-	syscall
-	li $v0, SysPrintInt
+	li $v0, SysPrintString # syscall to print string
+	la $a0, noMsg # load "Not quite" message
+	syscall # execute
+	li $v0, SysPrintInt # print integer code
 	move $a0, $s2 # move correct number to print
-	syscall
-	li $v0, SysPrintString
-	la $a0, nl
-	syscall
+	syscall # execute
+	li $v0, SysPrintString # print string code
+	la $a0, nl # load newline
+	syscall # execute
 	jal PlayWrongTone # play wrong noise
 	j next_question # go next
 
 decimal_to_binary:
 	# show decimal prompt with number
-	li $v0, SysPrintString
-	la $a0, d2bPrompt
-	syscall
-	li $v0, SysPrintInt
-	move $a0, $s2
-	syscall
-	li $v0, SysPrintString
-	la $a0, nl
-	syscall
+	li $v0, SysPrintString # syscall to print string
+	la $a0, d2bPrompt # load decimal label
+	syscall # execute
+	li $v0, SysPrintInt # syscall to print int
+	move $a0, $s2 # move random number to print
+	syscall # execute
+	li $v0, SysPrintString # syscall to print string
+	la $a0, nl # load newline
+	syscall # execute
 
 ask_bin:
 	# ask user for 8-bit binary
-	li $v0, SysPrintString
-	la $a0, askBin
-	syscall
-	li $v0, SysReadString # read binary string
-	la $a0, buf
-	lw $a1, bufLen
-	syscall
+	li $v0, SysPrintString # syscall to print string
+	la $a0, askBin # load binary input prompt
+	syscall # execute
+	li $v0, SysReadString # read user string input
+	la $a0, buf # load buffer address
+	lw $a1, bufLen # load buffer length
+	syscall # execute
+
+
 
 	# validate input format
 	la $a0, buf # pass input buffer
@@ -178,9 +183,9 @@ ask_bin:
 
 bad_bin:
 	# user input not valid binary
-	li $v0, SysPrintString
-	la $a0, retryMsg
-	syscall
+	li $v0, SysPrintString # syscall to print string
+	la $a0, retryMsg # retry message string
+	syscall # execute to print
 	j ask_bin # retry input
 
 wrong_bin:
@@ -188,23 +193,23 @@ wrong_bin:
 	move $a0, $s2 # move int to convert
 	la $a1, ansStr # buffer for binary
 	jal int_to_bin8 # int to binary
-	li $v0, SysPrintString
-	la $a0, noMsg
-	syscall
-	li $v0, SysPrintString
-	la $a0, ansStr
-	syscall
-	li $v0, SysPrintString
-	la $a0, nl
-	syscall
+	li $v0, SysPrintString # print string syscall
+	la $a0, noMsg # load "Not quite" message
+	syscall # print message
+	li $v0, SysPrintString # print string syscall
+	la $a0, ansStr # load correct binary string
+	syscall # print correct binary
+	li $v0, SysPrintString # print string syscall
+	la $a0, nl # load newline
+	syscall # print newline
 	jal PlayWrongTone # play wrong noise
 	j next_question # next question
 
 correct_answer:
 	# print “Correct!” message
-	li $v0, SysPrintString
-	la $a0, okMsg
-	syscall
+	li $v0, SysPrintString #syscall to print string
+	la $a0, okMsg # correct 
+	syscall # execute
 	jal PlayCorrectTone # play correct sound
 
 next_question:

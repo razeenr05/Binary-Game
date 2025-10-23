@@ -9,7 +9,7 @@ PlayCorrectTone:
     li $a1, 300 # duration = 150 ms
     li $a2, 100 # volume
     li $a3, 63 # instrument
-    syscall
+    syscall # execute
     jr $ra # return to caller
 
 PlayWrongTone:
@@ -18,5 +18,5 @@ PlayWrongTone:
     li $a1, 300 # duration = 300 ms
     li $a2, 100 # volume
     li $a3, 63 # instrument	
-    syscall
+    syscall # execute
     jr $ra # return to caller
